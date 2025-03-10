@@ -1,0 +1,21 @@
+{
+    "name": "xpath-scraper",
+    "version": "1.0.0",
+    "description": "Una aplicación web para realizar scraping utilizando XPath",
+    "main": "index.js",
+    "scripts": {
+      "build:css": "tailwindcss -i ./src/input.css -o ./dist/output.css",
+      "watch:css": "tailwindcss -i ./src/input.css -o ./dist/output.css --watch",
+      "dev": "npm run watch:css"
+    },
+    "keywords": [
+      "xpath",
+      "scraping",
+      "tailwindcss"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+      "tailwindcss": "^3.3.3"
+    }
+  }
