@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Si después de intentar todos los proxies, el HTML sigue siendo null
             if (html === null) {
-                throw new Error(`No se pudo acceder a la URL a través de ningún proxy. Último error: ${lastError ? lastError.message : 'Desconocido'}`);
+                throw new Error(`No se pudo acceder a la URL. Último error: ${lastError ? lastError.message : 'Desconocido'}`);
             }
             
             // Crear un documento HTML a partir del texto HTML
@@ -146,21 +146,23 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (results.length === 0) {
             const noResultsEl = document.createElement('div');
-            noResultsEl.className = 'text-gray-500 italic';
+            noResultsEl.className = 'text-gray-500 text-sm animate-fade-in';
             noResultsEl.textContent = 'No se encontraron elementos que coincidan con el XPath proporcionado.';
             resultsList.appendChild(noResultsEl);
         } else {
             // Crear elementos para cada resultado
             results.forEach((result, index) => {
                 const resultItem = document.createElement('div');
-                resultItem.className = 'p-3 bg-gray-50 rounded-md';
+                resultItem.className = 'p-3 bg-gray-700 rounded transition-all duration-300 hover:bg-gray-600 animate-slide-up';
+                // Añadir un retraso basado en el índice para crear efecto escalonado
+                resultItem.style.animationDelay = `${index * 50}ms`;
                 
                 const header = document.createElement('div');
-                header.className = 'flex justify-between items-center mb-2';
+                header.className = 'mb-2';
                 
                 const title = document.createElement('h3');
-                title.className = 'text-sm font-semibold';
-                title.textContent = `Resultado #${index + 1} - ${result.nodeType}`;
+                title.className = 'text-sm font-medium text-blue-300';
+                title.textContent = `${result.nodeType}`;
                 
                 header.appendChild(title);
                 resultItem.appendChild(header);
@@ -168,20 +170,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Añadir información según el tipo de nodo
                 if (result.nodeType === 'Element') {
                     const tagInfo = document.createElement('p');
-                    tagInfo.className = 'text-xs text-gray-500 mb-2';
+                    tagInfo.className = 'text-xs text-gray-400 mb-2';
                     tagInfo.textContent = `Tag: ${result.tagName}`;
                     resultItem.appendChild(tagInfo);
                     
-                    if (result.textContent) {
+                    // Mostrar imagen si el elemento es una imagen
+                    if (result.tagName === 'IMG') {
+                        // Extraer el atributo src utilizando expresiones regulares
+                        const srcMatch = result.content.match(/src=["'](.*?)["']/i);
+                        if (srcMatch && srcMatch[1]) {
+                            const imgContainer = document.createElement('div');
+                            imgContainer.className = 'mb-4 mt-2 text-center';
+                            
+                            const imgPreview = document.createElement('img');
+                            const srcUrl = srcMatch[1];
+                            // Comprobar si es una URL relativa o absoluta
+                            const imgSrc = srcUrl.startsWith('http') ? 
+                                srcUrl : 
+                                (srcUrl.startsWith('/') ? 
+                                    new URL(document.getElementById('url').value).origin + srcUrl : 
+                                    new URL(document.getElementById('url').value).origin + '/' + srcUrl);
+                            
+                            imgPreview.src = imgSrc;
+                            imgPreview.alt = 'Vista previa de imagen';
+                            imgPreview.className = 'max-w-full max-h-48 rounded border border-gray-600 shadow-lg animate-fade-in transition-transform duration-300 hover:scale-105';
+                            imgPreview.onerror = function() {
+                                this.onerror = null;
+                                this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzJkM2E0ZiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM5Y2EzYWYiPkltYWdlbiBubyBkaXNwb25pYmxlPC90ZXh0Pjwvc3ZnPg==';
+                                this.className = 'max-w-full max-h-48 rounded border border-gray-600 opacity-50';
+                            };
+                            imgContainer.appendChild(imgPreview);
+                            resultItem.appendChild(imgContainer);
+                        }
+                    }
+                    
+                    if (result.textContent && result.tagName !== 'IMG') {
                         const textContent = document.createElement('div');
                         textContent.className = 'mb-2';
-                        const textLabel = document.createElement('span');
-                        textLabel.className = 'text-xs font-medium text-gray-600';
-                        textLabel.textContent = 'Texto: ';
-                        textContent.appendChild(textLabel);
                         
-                        const textValue = document.createElement('span');
-                        textValue.className = 'text-sm';
+                        const textValue = document.createElement('p');
+                        textValue.className = 'text-sm text-gray-300';
                         textValue.textContent = result.textContent.length > 100 
                             ? result.textContent.substring(0, 100) + '...' 
                             : result.textContent;
@@ -190,17 +218,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         resultItem.appendChild(textContent);
                     }
                     
-                    // Código HTML
-                    const codeContainer = document.createElement('div');
-                    codeContainer.className = 'mt-2';
+                    // Botón para expandir/colapsar el código HTML
+                    const toggleButton = document.createElement('button');
+                    toggleButton.className = 'text-xs text-blue-400 hover:text-blue-300 transition-colors mb-2';
+                    toggleButton.textContent = 'Mostrar HTML';
+                    toggleButton.onclick = function() {
+                        if (codeContainer.classList.contains('hidden')) {
+                            codeContainer.classList.remove('hidden');
+                            codeContainer.classList.add('animate-fade-in');
+                            this.textContent = 'Ocultar HTML';
+                        } else {
+                            codeContainer.classList.add('hidden');
+                            this.textContent = 'Mostrar HTML';
+                        }
+                    };
+                    resultItem.appendChild(toggleButton);
                     
-                    const codeLabel = document.createElement('span');
-                    codeLabel.className = 'text-xs font-medium text-gray-600 block mb-1';
-                    codeLabel.textContent = 'HTML:';
-                    codeContainer.appendChild(codeLabel);
+                    // Código HTML (oculto por defecto)
+                    const codeContainer = document.createElement('div');
+                    codeContainer.className = 'mt-2 text-xs hidden';
                     
                     const code = document.createElement('pre');
-                    code.className = 'bg-gray-100 p-2 rounded text-xs overflow-x-auto';
+                    code.className = 'bg-gray-800 p-2 rounded overflow-x-auto text-gray-400 text-xs';
                     
                     // Limitar el tamaño del HTML mostrado
                     const htmlContent = result.content.length > 300 
@@ -213,13 +252,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultItem.appendChild(codeContainer);
                 } else if (result.nodeType === 'Text') {
                     const textContent = document.createElement('p');
-                    textContent.className = 'text-sm';
+                    textContent.className = 'text-sm text-gray-300';
                     textContent.textContent = result.content;
                     resultItem.appendChild(textContent);
                 } else if (result.nodeType === 'Attribute') {
                     const attrInfo = document.createElement('p');
-                    attrInfo.className = 'text-sm';
-                    attrInfo.innerHTML = `<span class="font-medium">${result.name}</span>: ${result.value}`;
+                    attrInfo.className = 'text-sm text-gray-300';
+                    attrInfo.innerHTML = `<span class="text-blue-300">${result.name}</span>: ${result.value}`;
                     resultItem.appendChild(attrInfo);
                 }
                 
@@ -227,8 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Mostrar contenedor de resultados
+        // Mostrar contenedor de resultados con animación
         resultsContainer.classList.remove('hidden');
+        resultsContainer.classList.add('animate-fade-in');
     }
 
     function showLoading() {
